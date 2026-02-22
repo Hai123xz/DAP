@@ -1,0 +1,49 @@
+﻿============================================================
+MASIVE (Sentence-level Emotion Classification)
+============================================================
+  emo_event_en_test.csv                           2799 samples
+  emo_event_en_train.csv                          7303 samples
+  emo_event_es_test.csv                           2923 samples
+  emo_event_es_train.csv                           842 samples
+  goemo_ekman_test.csv                            5427 samples
+  goemo_ekman_train.csv                          43410 samples
+  goemo_full_test.csv                             5427 samples
+  goemo_full_train.csv                           43410 samples
+  TOTAL                                         111541
+
+============================================================
+TRANSMISTRAL (Dialogue-level Emotion)
+============================================================
+  MELD_test_efr.json                              1002 samples
+  MELD_train_efr.json                             4000 samples
+  MELD_val_efr.json                                426 samples
+  MaSaC_test_efr.json                              385 samples
+  MaSaC_test_erc.json                               57 samples
+  MaSaC_train_efr.json                            4893 samples
+  MaSaC_train_erc.json                             343 samples
+  MaSaC_val_efr.json                               389 samples
+  MaSaC_val_erc.json                                46 samples
+  TOTAL utterances                               11541
+
+============================================================
+RVISA (Aspect-Based Sentiment Analysis)
+============================================================
+  [laptops]
+    Laptops_Test_Gold.xml                          800 sentences
+    Laptops_Test_Gold_Implicit_Labeled.xml         800 sentences
+    Laptops_Test_Gold_Implicit_Labeled_preprocess_finetune.pkl    126 KB (pickle)
+    Laptops_Train_v2.xml                          3045 sentences
+    Laptops_Train_v2_Implicit_Labeled.xml         3045 sentences
+    Laptops_Train_v2_Implicit_Labeled_preprocess_finetune.pkl    521 KB (pickle)
+  [restaurants]
+    Restaurants_Test_Gold.xml                      800 sentences
+    Restaurants_Test_Gold_Implicit_Labeled.xml     800 sentences
+    Restaurants_Test_Gold_Implicit_Labeled_preprocess_finetune.pkl    223 KB (pickle)
+    Restaurants_Train_v2.xml                      3041 sentences
+    Restaurants_Train_v2_Implicit_Labeled.xml     3041 sentences
+    Restaurants_Train_v2_Implicit_Labeled_preprocess_finetune.pkl    734 KB (pickle)
+  TOTAL                                          15372
+
+============================================================
+GRAND TOTAL: ~138454 data points
+============================================================
