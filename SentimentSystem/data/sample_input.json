@@ -1,0 +1,56 @@
+{
+  "conversation_id": "test-001",
+  "source": "chat",
+  "language_hint": "vi",
+  "utterances": [
+    {
+      "utt_id": "U1",
+      "speaker_id": "customer_01",
+      "timestamp": "2026-02-20T10:00:00",
+      "text_raw": "Xin chào, tôi muốn hỏi về đơn hàng #12345 của tôi.",
+      "reply_to_utt_id": null
+    },
+    {
+      "utt_id": "U2",
+      "speaker_id": "agent_01",
+      "timestamp": "2026-02-20T10:01:00",
+      "text_raw": "Chào anh/chị! Em kiểm tra ngay ạ. Đơn hàng đang trong quá trình vận chuyển.",
+      "reply_to_utt_id": "U1"
+    },
+    {
+      "utt_id": "U3",
+      "speaker_id": "customer_01",
+      "timestamp": "2026-02-20T10:02:00",
+      "text_raw": "Tôi đã chờ 2 tuần rồi mà chưa nhận được! Các bạn giao hàng kiểu gì vậy???",
+      "reply_to_utt_id": "U2"
+    },
+    {
+      "utt_id": "U4",
+      "speaker_id": "agent_01",
+      "timestamp": "2026-02-20T10:03:00",
+      "text_raw": "Em rất xin lỗi về sự bất tiện này. Em sẽ liên hệ bộ phận vận chuyển để kiểm tra ngay ạ.",
+      "reply_to_utt_id": "U3"
+    },
+    {
+      "utt_id": "U5",
+      "speaker_id": "customer_01",
+      "timestamp": "2026-02-20T10:05:00",
+      "text_raw": "Lần nào cũng nói kiểm tra, kiểm tra... Tôi muốn hoàn tiền luôn đi!",
+      "reply_to_utt_id": "U4"
+    },
+    {
+      "utt_id": "U6",
+      "speaker_id": "agent_01",
+      "timestamp": "2026-02-20T10:06:00",
+      "text_raw": "Dạ em hiểu ạ. Em đã tạo yêu cầu hoàn tiền cho anh/chị. Tiền sẽ được hoàn trong 3-5 ngày làm việc.",
+      "reply_to_utt_id": "U5"
+    },
+    {
+      "utt_id": "U7",
+      "speaker_id": "customer_01",
+      "timestamp": "2026-02-20T10:07:00",
+      "text_raw": "Được rồi, cảm ơn. Nhưng thật sự rất thất vọng với dịch vụ lần này.",
+      "reply_to_utt_id": "U6"
+    }
+  ]
+}

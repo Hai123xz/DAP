@@ -1,0 +1,22 @@
+# Pipeline Configuration
+# Copy this file and adjust settings as needed
+
+# LLM API Settings
+model_name: "mistral-small-latest"
+
+# Preprocessing (Step 0)
+enable_translation: false
+enable_pii_redaction: true
+pivot_language: "en"
+
+# Anchor Gating
+anchor_threshold: 0.65
+max_anchors: 20
+always_include_flip_triggers: true
+
+# RVISA Window (Step 2)
+window_before: 6
+window_after: 2
+# Expanded window near flip zones (used automatically)
+# window_before_flip: 12
+# window_after_flip: 4

@@ -1,0 +1,1 @@
+# Copy dữ liệu từ THOR-ISA/data/laptops/ nếu cần

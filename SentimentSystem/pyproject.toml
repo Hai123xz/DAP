@@ -1,0 +1,18 @@
+[project]
+name = "sentiment-system"
+version = "1.0.0"
+description = "API-based Sentiment Analysis Pipeline: TransMistral + RVISA + MASIVE"
+requires-python = ">=3.8"
+dependencies = [
+    "pydantic>=2.0",
+    "pyyaml",
+    "requests",
+    "python-dotenv",
+    "langdetect",
+    "deep-translator",
+    "tqdm",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,12 @@
+# Core dependencies for API-based pipeline
+pydantic>=2.0
+pyyaml
+requests
+python-dotenv
+
+# Preprocessing
+langdetect
+deep-translator
+
+# Utilities
+tqdm

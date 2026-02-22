@@ -1,19 +1,14 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyd
-.Python
-
-# Virtual envs
-.venv/
-venv/
-ENV/
-
-
-
-# Secrets / local config
+# Environment variables
 .env
 
+# Virtual environment
+SenSys/
+SentimentSystem/SenSys/
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
 
-
+# API keys
+api_keys/
