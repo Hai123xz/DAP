@@ -1,0 +1,41 @@
+# Environments and Secrets
+.env
+api_keys/
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+
+# Large folders/Data
+SenSys/
+data/
+datasets/
+models/
+output/
+logs/
+
+# Large files
+*.pth
+*.pt
+*.pkl
+*.bin
+*.h5
+*.hdf5
+*.onnx
+*.safetensors
+*.csv
+*.tsv
+*.zip
+*.tar.gz
+*.rar
+
+# OS
+.DS_Store
+Thumbs.db

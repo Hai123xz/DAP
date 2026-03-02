@@ -1,0 +1,232 @@
+================================================================================
+          SENTIMENT ANALYSIS PIPELINE — DETAILED FLOW DESCRIPTION
+================================================================================
+
+Overview: The pipeline consists of 4 sequential processing steps (Step 0 → 1 → 2 → 3) + Final Assembly.
+Steps 1, 2, and 3 all invoke the LLM (Mistral API) via the call_llm_mistral.py module.
+Orchestrator: scripts/run_pipeline.py manages the entire flow.
+
+================================================================================
+STEP 0 — PREPROCESSING & NORMALIZATION
+================================================================================
+
+  Purpose  : Normalize raw data into a unified format, preserving emotional
+             signals and removing sensitive information.
+
+  Input    : ConversationObject (Contract A)
+             - Raw utterances
+             - Speaker identifiers
+             - Timestamps
+             - Reply-to relationships
+             - Sources: Facebook comments, chat logs, forum threads
+
+  Processing:
+    0.1  Thread Flattening       — Sort chronologically, preserve reply_to_utt_id
+    0.2  Speaker Canonicalization — Assign consistent IDs: S1, S2, S3...
+    0.3  Text Cleaning           — URL → <url>, @mention → <user>, normalize whitespace
+                                   PRESERVED: emojis, "!!!", "???", elongated words ("soooo")
+    0.4  PII Redaction           — phone → <pii_phone>, email → <pii_email>
+    0.5  Language Detection      — Detect vi/en/mixed/unknown per utterance
+                                   Uses: langdetect + Vietnamese Unicode heuristic
+    0.6  Translation (optional)  — Translate to English (pivot language) if vi/mixed
+                                   Uses: deep-translator, cached by hash(text_clean)
+
+  Output   : PreprocessedConversation (Contract B)
+             - Cleaned utterances with language tags
+             - Optional translations
+             - Preprocessing metadata
+
+  Uses     : Pure Python (no LLM calls)
+             Libraries: langdetect, deep-translator, regex
+  Code file: modules/preprocessing/engine.py
+
+================================================================================
+STEP 1 — TRANSMISTRAL: CONTEXTUAL PARSING
+================================================================================
+
+  Purpose  : Analyze the full conversational context, assign coarse emotions,
+             detect emotion flips, and select anchor utterances for deep analysis.
+
+  Input    : PreprocessedConversation (Contract B)
+             - List of normalized utterances
+             - Language tags, translations
+
+  Processing:
+    1.1  Conversation serialization → standardized prompt format:
+         [utt_id=U12][t=2026-02-20T10:02:00][S=S2][reply_to=U9] raw:"..." | translated:"..."
+
+    1.2  Long conversation handling (select 1 of 4 strategies):
+         A. Full conversation     — entire conversation (if fits context window)
+         B. Sliding Tail          — only last N utterances
+         C. Summary + Tail ★      — summary of older turns + tail (DEFAULT)
+         D. Two-pass refinement   — pass 1: find flip zones → pass 2: refine
+
+    1.3  LLM CALL (Mistral API):
+         - System prompt: requires ONLY valid JSON output per schema
+         - User prompt: 3 tasks:
+           (1) Assign coarse emotion per utterance
+           (2) Detect emotion flips
+           (3) Select anchor utterances
+
+    1.4  JSON parse + Pydantic validation + retry on failure
+
+  Output   : TransMistralOutput (Contract C)
+             - coarse_timeline: emotion + probability per utterance
+               (neutral, joy, sadness, anger, fear, disgust, surprise, mixed, unknown)
+             - flip_events: emotion trajectory change events (e.g., calm→anger)
+             - anchors[]: list of utterances requiring deep reasoning
+               (flip triggers, high-arousal, low-confidence, sarcasm, escalation)
+             - context_summary: natural language summary of conversational dynamics
+
+  Uses     : LLM — Mistral API (mistral-small-latest) via call_llm_mistral.py
+  Code file: modules/transmistral/engine.py
+
+================================================================================
+ANCHOR GATING (BETWEEN STEP 1 AND STEP 2)
+================================================================================
+
+  Purpose  : Cost control — only anchors meeting criteria proceed to
+             Steps 2 & 3 (each anchor = multiple expensive LLM calls).
+
+  Input    : anchors[] from Step 1 + flip_events[]
+
+  Processing:
+    - Keep anchors with anchor_score >= 0.65 (default threshold)
+    - Always keep flip triggers (regardless of score)
+    - Cap at maximum 20 anchors, ranked by score
+
+  Output   : Filtered anchor list (subset of original anchors[])
+
+  Uses     : Pure Python (no LLM calls)
+  Code file: scripts/run_pipeline.py → gate_anchors() function
+
+================================================================================
+STEP 2 — RVISA: REASONING & VERIFICATION (per anchor)
+================================================================================
+
+  Purpose  : For EACH anchor, reason about WHY the emotion exists and verify
+             the reasoning against textual evidence. Consists of 2 stages.
+
+  ---- STAGE 2A — GENERATOR (Hypothesis Generation) ----
+
+  Input    :
+    - anchor_utt_id + anchor_text (utterance to analyze)
+    - Context window: k utterances before/after the anchor
+      + Default: k_before=6, k_after=2
+      + Near flip zone: k_before=12, k_after=4
+    - context_summary from Step 1
+
+  Processing:
+    LLM CALL (Mistral API):
+    - Prompt contains: global context summary + context window + anchor
+    - LLM is asked to reason: aspect → cause → attitude + evidence
+
+  Output   : Reasoning hypothesis (JSON):
+    {
+      "aspect":    "service reliability",
+      "cause":     "ignored for 48 hours",
+      "inferred_attitude": "negative",
+      "rationale": "...",
+      "evidence":  [{"utt_id": "U10", "quote": "..."}]
+    }
+
+  ---- STAGE 2B — VERIFIER (Evidence Verification) ----
+
+  Input    :
+    - Generator output (hypothesis)
+    - Context window (same window as Generator)
+
+  Processing:
+    LLM CALL (Mistral API):
+    - Checks whether the hypothesis is supported by evidence in the window
+
+    PASS if ALL conditions hold:
+      ✓ Aspect/cause explicitly stated or strongly implied in window
+      ✓ Rationale does not fabricate events or entities
+      ✓ Evidence spans reference actual text content
+      ✓ Speaker attribution is correct
+
+    FAIL if ANY condition triggers:
+      ✗ Rationale relies on unsupported assumptions
+      ✗ Contradicts text in the window
+      ✗ Incorrect speaker attribution
+      ✗ Sarcasm interpreted without contextual grounding
+
+  Output   : RVISAOutput (Contract D)
+             - verdict: PASS or FAIL
+             - confidence: confidence score (0-1)
+             - aspect, cause, inferred_attitude
+             - verified_rationale
+             - evidence_spans[] (character-level)
+             → Only verdict=PASS proceeds to Step 3
+
+  Uses     : LLM — Mistral API (mistral-small-latest) via call_llm_mistral.py
+             2 LLM calls per anchor (Generator + Verifier)
+  Code file: modules/rvisa/engine.py
+
+================================================================================
+STEP 3 — MASIVE: FINE-GRAINED AFFECTIVE LABELING (per anchor, only PASS)
+================================================================================
+
+  Purpose  : Convert verified reasoning into fine-grained affective state labels
+             that are psychologically meaningful, serving CRM/UX/BI applications.
+
+  Input    : RVISAOutput (Contract D) — only anchors with verdict=PASS
+             - verified_rationale
+             - aspect
+             - cause
+             - inferred_attitude
+
+  Processing:
+    LLM CALL (Mistral API):
+    - Generate fine-grained affective label (2-6 words EN, 2-8 words VI)
+    - Avoid generic labels ("negative", "sad")
+    - Prefer psychologically meaningful phrases: "frustrated due to neglect", "betrayed trust",...
+
+    Label Normalization (1 of 4 methods):
+    - Exact match:     direct lookup in a curated vocabulary
+    - Embedding match: nearest neighbor in embedding space
+    - LLM rerank:      LLM ranks top-N candidates
+    - Clustering:      group labels into 50-200 buckets
+
+  Output   : MASIVEOutput (Contract E)
+             - fine_grained_label: e.g. "frustrated due to broken promises"
+             - alt_labels[]: e.g. ["exasperated disappointment", "exhausted patience"]
+             - confidence: confidence score (0-1)
+             - normalization metadata
+
+  Uses     : LLM — Mistral API (mistral-small-latest) via call_llm_mistral.py
+  Code file: modules/masive/engine.py
+
+================================================================================
+FINAL ASSEMBLY
+================================================================================
+
+  Purpose  : Merge results from all steps into the final report.
+
+  Input    :
+    - TransMistralOutput (Contract C) — from Step 1
+    - RVISAOutput (Contract D) — from Step 2 (per anchor)
+    - MASIVEOutput (Contract E) — from Step 3 (per anchor)
+    - PreprocessedConversation (Contract B)
+    - Pipeline config
+
+  Processing:
+    - Merge coarse emotions for ALL utterances (from Step 1)
+    - Attach RVISA + MASIVE results for anchor utterances
+    - Compute dominant_states (dominant affective states)
+    - Identify key_anchors (most important anchors)
+    - Attach metadata: model versions, pipeline config, processing options
+
+  Output   : FinalEmotionReport
+             - conversation_id
+             - Full coarse timeline (all utterances)
+             - Deep analysis results (analyzed anchors)
+             - dominant_affective_states
+             - key_anchors
+             - metadata (model, config, timestamps)
+
+  Uses     : Pure Python (no LLM calls)
+  Code file: scripts/run_pipeline.py → assemble_report() function
+
+================================================================================
