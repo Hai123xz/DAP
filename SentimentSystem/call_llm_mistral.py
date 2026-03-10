@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from threading import Lock
 from typing import List, Optional, Union
+from mistralai import Mistral
 
 import requests
 from dotenv import load_dotenv
@@ -72,6 +73,9 @@ MAGISTRAL_MODEL_NAME = "mistral-small-latest"  # ← kept as-is
 
 # Request timeout in seconds (prevents hanging)
 REQUEST_TIMEOUT = 180
+
+client = Mistral(api_key=MISTRAL_API_KEYS[0])
+
 
 # ========================= KEY MANAGEMENT =========================
 # API key timeout tracking (unified for both cooldown and rate limits)
@@ -461,22 +465,19 @@ def ask(
     Returns:
         Generated text (reasoning blocks stripped).
     """
+    messages = []
+    if sys_prompt:
+        messages.append({"role": "system", "content": sys_prompt})
+    messages.append({"role": "user", "content": user_prompt})
 
-    def _call_once() -> str:
-        messages = []
-        if sys_prompt:
-            messages.append({"role": "system", "content": sys_prompt})
-        messages.append({"role": "user", "content": user_prompt})
+    response = client.chat.complete(
+        model=model_name,
+        messages=messages,
+        max_tokens=max_tokens,
+        temperature=temperature,
+    )
 
-        payload = {
-            "model": model_name,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }
-        return _make_api_call(payload)
-
-    return _retry_wrapper(_call_once, infinite_retry)
+    return remove_reasoning(response.choices[0].message.content)
 
 
 def ask_with_messages(
